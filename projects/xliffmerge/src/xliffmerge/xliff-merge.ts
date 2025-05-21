@@ -159,7 +159,7 @@ export class XliffMerge {
         }
         this.readMaster();
         if (this.parameters.autotranslate()) {
-            this.autoTranslateService = new XliffMergeAutoTranslateService(this.parameters.apikey());
+            this.autoTranslateService = new XliffMergeAutoTranslateService(this.parameters.apikey(), 'chatgpt', 'gpt-4o-mini');
         }
         const executionForAllLanguages: Observable<number>[] = [];
         this.parameters.languages().forEach((lang: string) => {

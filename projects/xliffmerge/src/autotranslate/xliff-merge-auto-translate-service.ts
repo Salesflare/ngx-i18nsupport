@@ -6,20 +6,76 @@ import {
     IICUMessage, IICUMessageTranslation, INormalizedMessage, ITranslationMessagesFile, ITransUnit,
     STATE_NEW
 } from '@ngx-i18nsupport/ngx-i18nsupport-lib';
-import {AutoTranslateService} from './auto-translate-service';
+import {AutoTranslateService, GoogleTranslateProvider, ChatGPTProvider, TranslationDirective} from './auto-translate-service';
 import {AutoTranslateResult} from './auto-translate-result';
 import {AutoTranslateSummaryReport} from './auto-translate-summary-report';
 /**
  * Created by martin on 07.07.2017.
- * Service to autotranslate Transunits via Google Translate.
+ * Service to autotranslate Transunits via different translation providers.
  */
 
 export class XliffMergeAutoTranslateService {
 
     private autoTranslateService: AutoTranslateService;
+    private _provider: 'google' | 'chatgpt';
+    private _model?: string;
+    private _directives: TranslationDirective[] = [];
+    private _context: string = '';
 
-    constructor(apikey: string) {
-        this.autoTranslateService = new AutoTranslateService(apikey);
+    constructor(apikey: string, provider: 'google' | 'chatgpt' = 'google', model?: string) {
+        this._provider = provider;
+        this._model = model;
+        this.initializeService(apikey);
+    }
+
+    private initializeService(apikey: string) {
+        const translationProvider = this._provider === 'google' 
+            ? new GoogleTranslateProvider(apikey)
+            : new ChatGPTProvider(apikey, this._model);
+        
+        if (this._provider === 'chatgpt') {
+            const chatGPTProvider = translationProvider as ChatGPTProvider;
+            if (this._directives.length > 0) {
+                chatGPTProvider.setDirectives(this._directives);
+            }
+            if (this._context) {
+                chatGPTProvider.setContext(this._context);
+            }
+        }
+        
+        this.autoTranslateService = new AutoTranslateService(translationProvider);
+    }
+
+    /**
+     * Set translation directives for ChatGPT provider
+     * @param directives array of translation directives
+     */
+    public setDirectives(directives: TranslationDirective[]) {
+        this._directives = directives;
+        if (this._provider === 'chatgpt') {
+            const chatGPTProvider = (this.autoTranslateService as any).provider as ChatGPTProvider;
+            chatGPTProvider.setDirectives(directives);
+        }
+    }
+
+    /**
+     * Set context for translations (ChatGPT provider only)
+     * @param context additional context to help with translation
+     */
+    public setContext(context: string) {
+        this._context = context;
+        if (this._provider === 'chatgpt') {
+            const chatGPTProvider = (this.autoTranslateService as any).provider as ChatGPTProvider;
+            chatGPTProvider.setContext(context);
+        }
+    }
+
+    /**
+     * Change the API key
+     * @param apikey new API key
+     */
+    public setApiKey(apikey: string) {
+        this.initializeService(apikey);
     }
 
     /**
