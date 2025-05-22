@@ -379,7 +379,7 @@ export class ChatGPTProvider implements TranslationProvider {
         };
 
         return new Observable<string[]>(observer => {
-            request(options, (error, response, body) => {
+            request.post(options, (error, response, body) => {
                 if (error) {
                     observer.error(error);
                     return;

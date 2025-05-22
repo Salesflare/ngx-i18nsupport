@@ -1,7 +1,7 @@
 import * as fs from 'fs';
 import {FileUtil} from '../common/file-util';
 import {format} from 'util';
-import {AutoTranslateService} from './auto-translate-service';
+import {AutoTranslateService, GoogleTranslateProvider} from './auto-translate-service';
 /**
  * Created by roobm on 06.07.2017.
  * Testcases for the autotranslate service.
@@ -33,7 +33,9 @@ describe('Autotranslate tests', () => {
     beforeEach(() => {
         apikey = getApiKey();
         if (apikey) {
-            service = new AutoTranslateService(apikey);
+            const provider = new GoogleTranslateProvider(apikey);
+            service = new AutoTranslateService(provider);
+            provider.setApiKey('lmaa');
         } else {
             service = null;
         }
@@ -44,7 +46,8 @@ describe('Autotranslate tests', () => {
             done();
             return;
         }
-        service.setApiKey('lmaa');
+        const provider = new GoogleTranslateProvider('lmaa');
+        service = new AutoTranslateService(provider);
         service.translateMultipleStrings(['a', 'b'], 'en', 'de').subscribe(() => {
             expect('should not be called').toBe('');
             done();
