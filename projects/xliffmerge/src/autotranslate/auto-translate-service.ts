@@ -181,17 +181,6 @@ export class GoogleTranslateProvider implements TranslationProvider {
         );
     }
 
-    private stripRegioncode(lang: string): string {
-        const langLower = lang.toLowerCase();
-        for (let i = 0; i < langLower.length; i++) {
-            const c = langLower.charAt(i);
-            if (c < 'a' || c > 'z') {
-                return langLower.substring(0, i);
-            }
-        }
-        return langLower;
-    }
-
     private splitMessagesToGoogleLimit(messages: string[]): string[][] {
         if (messages.length <= MAX_SEGMENTS) {
             return [messages];
@@ -464,10 +453,23 @@ export class AutoTranslateService {
     }
 
     public translateMultipleStrings(messages: string[], from: string, to: string): Observable<string[]> {
+        from = AutoTranslateService.stripRegioncode(from);
+        to = AutoTranslateService.stripRegioncode(to);
         return this.provider.translateMultipleStrings(messages, from, to);
     }
 
     public getSupportedLanguages(target?: string): Observable<Language[]> {
         return this.provider.getSupportedLanguages(target);
+    }
+
+    public static stripRegioncode(lang: string): string {
+        const langLower = lang.toLowerCase();
+        for (let i = 0; i < langLower.length; i++) {
+            const c = langLower.charAt(i);
+            if (c < 'a' || c > 'z') {
+                return langLower.substring(0, i);
+            }
+        }
+        return langLower;
     }
 }
