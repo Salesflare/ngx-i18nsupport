@@ -340,7 +340,7 @@ export class ChatGPTProvider implements TranslationProvider {
 
         const batchRequests = batches.map(batch => this.translateBatch(batch, from, to));
         return forkJoin(batchRequests).pipe(
-            map(results => results.flat())
+            map(results => results.reduce((acc, curr) => acc.concat(curr), []))
         );
     }
 
