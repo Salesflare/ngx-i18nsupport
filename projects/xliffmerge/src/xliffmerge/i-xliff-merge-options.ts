@@ -51,5 +51,7 @@ export interface IXliffMergeOptions {
         // if it is false (default) no autotranslate
     apikey?: string;    // API Key for Google Translate, required if autotranslate is enabled
     apikeyfile?: string;    // file name where API Key for Google Translate can be read from
+    provider?: 'google' | 'chatgpt';  // translation provider to use
+    model?: string;     // model name for ChatGPT provider
 }
 

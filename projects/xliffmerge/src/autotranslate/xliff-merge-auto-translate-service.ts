@@ -9,6 +9,7 @@ import {
 import {AutoTranslateService, GoogleTranslateProvider, ChatGPTProvider, TranslationDirective} from './auto-translate-service';
 import {AutoTranslateResult} from './auto-translate-result';
 import {AutoTranslateSummaryReport} from './auto-translate-summary-report';
+import { CommandOutput } from '../public_api';
 /**
  * Created by martin on 07.07.2017.
  * Service to autotranslate Transunits via different translation providers.
@@ -16,19 +17,35 @@ import {AutoTranslateSummaryReport} from './auto-translate-summary-report';
 
 export class XliffMergeAutoTranslateService {
 
+    private commandOutput: CommandOutput;
     private autoTranslateService: AutoTranslateService;
     private _provider: 'google' | 'chatgpt';
     private _model?: string;
     private _directives: TranslationDirective[] = [];
     private _context: string = '';
 
-    constructor(apikey: string, provider: 'google' | 'chatgpt' = 'google', model?: string) {
+    constructor(commandOutput: CommandOutput, apikey: string, provider: 'google' | 'chatgpt' = 'google', model?: string) {
         this._provider = provider;
         this._model = model;
+        this.commandOutput = commandOutput;
+
+        // Validate API key format based on provider
+        if (provider === 'chatgpt') {
+            if (!apikey.startsWith('sk-')) {
+                throw new Error('Invalid OpenAI API key format. OpenAI API keys should start with "sk-". Please provide a valid OpenAI API key or switch to Google Translate provider.');
+            }
+        } else if (provider === 'google') {
+            if (!apikey.startsWith('AIza')) {
+                throw new Error('Invalid Google Translate API key format. Google API keys should start with "AIza". Please provide a valid Google Translate API key or switch to ChatGPT provider.');
+            }
+        }
+        
         this.initializeService(apikey);
     }
 
     private initializeService(apikey: string) {
+        this.commandOutput.info('Initializing auto-translate service with API key: ' + apikey);
+        this.commandOutput.info('Provider: ' + this._provider);
         const translationProvider = this._provider === 'google' 
             ? new GoogleTranslateProvider(apikey)
             : new ChatGPTProvider(apikey, this._model);
@@ -43,6 +60,7 @@ export class XliffMergeAutoTranslateService {
             }
         }
         
+        this.commandOutput.info(`Using instance ${translationProvider instanceof ChatGPTProvider ? 'ChatGPT' : 'Google Translate'}`);
         this.autoTranslateService = new AutoTranslateService(translationProvider);
     }
 

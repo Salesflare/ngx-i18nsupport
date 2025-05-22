@@ -146,21 +146,37 @@ export class XliffMerge {
         if (this.parameters.verbose()) {
             this.parameters.showAllParameters(this.commandOutput);
         }
+
+        // Check for errors first, before any other operations
         if (this.parameters.errorsFound.length > 0) {
             for (const err of this.parameters.errorsFound) {
                 this.commandOutput.error(err.message);
             }
             return of(-1);
         }
+
+        // Initialize translation service if autotranslate is enabled
+        if (this.parameters.autotranslate()) {
+            const apikey = this.parameters.apikey();
+            try {
+                this.autoTranslateService = new XliffMergeAutoTranslateService(new CommandOutput(process.stdout),
+                    apikey,
+                    this.parameters.provider(),
+                    this.parameters.model()
+                );
+            } catch (error) {
+                this.commandOutput.error(error.message);
+                return of(-1);
+            }
+        }
+
         if (this.parameters.warningsFound.length > 0) {
             for (const warn of this.parameters.warningsFound) {
                 this.commandOutput.warn(warn);
             }
         }
+
         this.readMaster();
-        if (this.parameters.autotranslate()) {
-            this.autoTranslateService = new XliffMergeAutoTranslateService(this.parameters.apikey(), 'chatgpt', 'gpt-4o-mini');
-        }
         const executionForAllLanguages: Observable<number>[] = [];
         this.parameters.languages().forEach((lang: string) => {
             executionForAllLanguages.push(this.processLanguage(lang));
@@ -309,15 +325,18 @@ export class XliffMerge {
         const languageSpecificMessagesFile: ITranslationMessagesFile =
             this.master.createTranslationFileForLang(lang, languageXliffFilePath, isDefaultLang, this.parameters.useSourceAsTarget());
         return this.autoTranslate(this.master.sourceLanguage(), lang, languageSpecificMessagesFile).pipe(
-            map((/* summary */) => {
-            // write it to file
-            TranslationMessagesFileReader.save(languageSpecificMessagesFile, this.parameters.beautifyOutput());
-            this.commandOutput.info('created new file "%s" for target-language="%s"', languageXliffFilePath, lang);
-            if (!isDefaultLang) {
-                this.commandOutput.warn('please translate file "%s" to target-language="%s"', languageXliffFilePath, lang);
-            }
-            return null;
-        }));
+            map((summary) => {
+                if (summary.error() || summary.failed() > 0) {
+                    throw new Error(summary.content());
+                }
+                // write it to file
+                TranslationMessagesFileReader.save(languageSpecificMessagesFile, this.parameters.beautifyOutput());
+                this.commandOutput.info('created new file "%s" for target-language="%s"', languageXliffFilePath, lang);
+                if (!isDefaultLang) {
+                    this.commandOutput.warn('please translate file "%s" to target-language="%s"', languageXliffFilePath, lang);
+                }
+                return null;
+            }));
     }
 
     /**
@@ -455,7 +474,10 @@ export class XliffMerge {
             return of(null);
         } else {
             return this.autoTranslate(this.master.sourceLanguage(), lang, languageSpecificMessagesFile)
-                .pipe(map(() => {
+                .pipe(map((summary) => {
+                    if (summary.error() || summary.failed() > 0) {
+                        throw new Error(summary.content());
+                    }
                     // write it to file
                     TranslationMessagesFileReader.save(languageSpecificMessagesFile, this.parameters.beautifyOutput());
                     this.commandOutput.info('updated file "%s" for target-language="%s"', languageXliffFilePath, lang);

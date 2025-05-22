@@ -42,6 +42,8 @@ export class XliffMergeParameters {
     private _autotranslate: boolean|string[];
     private _apikey: string;
     private _apikeyfile: string;
+    private _provider: 'google' | 'chatgpt';
+    private _model: string;
 
     public errorsFound: XliffMergeError[];
     public warningsFound: string[];
@@ -234,6 +236,33 @@ export class XliffMergeParameters {
             if (!isNullOrUndefined(profile.apikeyfile)) {
                 this._apikeyfile = profile.apikeyfile;
             }
+            if (!isNullOrUndefined(profile.provider)) {
+                this._provider = profile.provider;
+            }
+            if (!isNullOrUndefined(profile.model)) {
+                this._model = profile.model;
+            }
+
+            // Validate API key and provider configuration during initialization
+            if (this._autotranslate) {
+                if (!this._provider) {
+                    this.errorsFound.push(new XliffMergeError('Provider must be explicitly set when autotranslate is enabled. Please set provider to either "google" or "chatgpt"'));
+                } else if (this._provider !== 'google' && this._provider !== 'chatgpt') {
+                    this.errorsFound.push(new XliffMergeError('Invalid provider. Provider must be either "google" or "chatgpt"'));
+                }
+
+                const apikey = this._apikey || (this._apikeyfile ? FileUtil.read(this._apikeyfile, 'utf-8') : null);
+                if (!apikey) {
+                    this.errorsFound.push(new XliffMergeError('Automatic translation is enabled but no API key is configured. Please set up an API key in your configuration or disable autotranslate.'));
+                } else {
+                    if (this._provider === 'chatgpt' && !apikey.startsWith('sk-')) {
+                        this.errorsFound.push(new XliffMergeError('Cannot proceed with translation: OpenAI API key format is invalid. Please provide a valid OpenAI API key or switch to Google Translate provider.'));
+                    }
+                    if (this._provider === 'google' && !apikey.startsWith('AIza')) {
+                        this.errorsFound.push(new XliffMergeError('Cannot proceed with translation: Google Translate API key format is invalid. Please provide a valid Google Translate API key or switch to ChatGPT provider.'));
+                    }
+                }
+            }
         } else {
             this.warningsFound.push('did not find "xliffmergeOptions" in profile, using defaults');
         }
@@ -251,9 +280,13 @@ export class XliffMergeParameters {
         this.languages().forEach((lang) => {
             this.checkLanguageSyntax(lang);
         });
+        this.autotranslatedLanguages().forEach((lang) => {
+            this.checkLanguageSyntax(lang);
+        });
+
+        // srcDir should exists
         let stats: Stats;
         let err: any;
-        // srcDir should exists
         try {
             stats = fs.statSync(this.srcDir());
         } catch (e) {
@@ -262,6 +295,7 @@ export class XliffMergeParameters {
         if (!!err || !stats.isDirectory()) {
             this.errorsFound.push(new XliffMergeError('srcDir "' + this.srcDir() + '" is not a directory'));
         }
+
         // genDir should exists
         try {
             stats = fs.statSync(this.genDir());
@@ -271,30 +305,67 @@ export class XliffMergeParameters {
         if (!!err || !stats.isDirectory()) {
             this.errorsFound.push(new XliffMergeError('genDir "' + this.genDir() + '" is not a directory'));
         }
+
         // master file MUST exist
         try {
             fs.accessSync(this.i18nFile(), fs.constants.R_OK);
         } catch (err) {
             this.errorsFound.push(new XliffMergeError('i18nFile "' + this.i18nFile() + '" is not readable'));
         }
+
         // i18nFormat must be xlf xlf2 or xmb
         if (!(this.i18nFormat() === 'xlf' || this.i18nFormat() === 'xlf2' || this.i18nFormat() === 'xmb')) {
             this.errorsFound.push(new XliffMergeError('i18nFormat "' + this.i18nFormat() + '" invalid, must be "xlf" or "xlf2" or "xmb"'));
         }
-        // autotranslate requires api key
-        if (this.autotranslate() && !this.apikey()) {
-            this.errorsFound.push(new XliffMergeError('autotranslate requires an API key, please set one'));
+
+        // Check API key and provider configuration regardless of autotranslate setting
+        if (this._apikey || this._apikeyfile) {
+            const apikey = this._apikey || (this._apikeyfile ? FileUtil.read(this._apikeyfile, 'utf-8') : null);
+            if (apikey) {
+                if (this._provider === 'google' && !apikey.startsWith('AIza')) {
+                    this.errorsFound.push(new XliffMergeError('Invalid Google Translate API key format. Google API keys should start with "AIza". Please provide a valid Google Translate API key or switch to ChatGPT provider.'));
+                }
+                if (this._provider === 'chatgpt' && !apikey.startsWith('sk-')) {
+                    this.errorsFound.push(new XliffMergeError('Invalid OpenAI API key format. OpenAI API keys should start with "sk-". Please provide a valid OpenAI API key or switch to Google Translate provider.'));
+                }
+            }
+            if (this._provider === 'google' && this._model) {
+                this.warningsFound.push('Model specification is ignored when using Google Translate provider.');
+            }
         }
-        // autotranslated languages must be in list of all languages
-        this.autotranslatedLanguages().forEach((lang) => {
-            if (this.languages().indexOf(lang) < 0) {
-                this.errorsFound.push(new XliffMergeError('autotranslate language "' + lang + '" is not in list of languages'));
+
+        // Additional checks for when autotranslate is enabled
+        if (this._autotranslate) {
+            if (!this._apikey && !this._apikeyfile) {
+                this.errorsFound.push(new XliffMergeError('autotranslate is enabled, but no API key is configured'));
             }
-            if (lang === this.defaultLanguage()) {
-                this.errorsFound.push(
-                    new XliffMergeError('autotranslate language "' + lang + '" cannot be translated, because it is the source language'));
+            if (!this._provider) {
+                this.errorsFound.push(new XliffMergeError('autotranslate is enabled, but no provider is configured. Please set provider to either "google" or "chatgpt"'));
             }
-        });
+            // Validate API key format matches provider when autotranslate is enabled
+            if (this._apikey || this._apikeyfile) {
+                const apikey = this._apikey || (this._apikeyfile ? FileUtil.read(this._apikeyfile, 'utf-8') : null);
+                if (apikey) {
+                    if (this._provider === 'google' && !apikey.startsWith('AIza')) {
+                        this.errorsFound.push(new XliffMergeError('Cannot proceed with translation: Google Translate API key format is invalid. Please provide a valid Google Translate API key or switch to ChatGPT provider.'));
+                    }
+                    if (this._provider === 'chatgpt' && !apikey.startsWith('sk-')) {
+                        this.errorsFound.push(new XliffMergeError('Cannot proceed with translation: OpenAI API key format is invalid. Please provide a valid OpenAI API key or switch to Google Translate provider.'));
+                    }
+                }
+            }
+            // autotranslated languages must be in list of all languages
+            this.autotranslatedLanguages().forEach((lang) => {
+                if (this.languages().indexOf(lang) < 0) {
+                    this.errorsFound.push(new XliffMergeError('autotranslate language "' + lang + '" is not in list of languages'));
+                }
+                if (lang === this.defaultLanguage()) {
+                    this.errorsFound.push(
+                        new XliffMergeError('autotranslate language "' + lang + '" cannot be translated, because it is the source language'));
+                }
+            });
+        }
+
         // ngx translate pattern check
         if (this.supportNgxTranslate()) {
             const checkResult = NgxTranslateExtractor.checkPattern(this.ngxTranslateExtractionPattern());
@@ -303,6 +374,7 @@ export class XliffMergeParameters {
                     new XliffMergeError('ngxTranslateExtractionPattern "' + this.ngxTranslateExtractionPattern() + '": ' + checkResult));
             }
         }
+
         // targetPraefix and targetSuffix check
         if (!this.useSourceAsTarget()) {
             if (this.targetPraefix().length > 0) {
@@ -314,7 +386,7 @@ export class XliffMergeParameters {
                     'configured targetSuffix "' + this.targetSuffix() + '" will not be used because "useSourceAsTarget" is disabled"');
             }
         }
-     }
+    }
 
     /**
      * Check syntax of language.
@@ -375,6 +447,8 @@ export class XliffMergeParameters {
             commandOutput.debug('apikey:\t%s', this.apikey() ? '****' : 'NOT SET');
             commandOutput.debug('apikeyfile:\t%s', this.apikeyfile());
         }
+        commandOutput.debug('provider:\t%s', this.provider());
+        commandOutput.debug('model:\t%s', this.model());
     }
 
     /**
@@ -596,5 +670,41 @@ export class XliffMergeParameters {
         } else {
             return null;
         }
+    }
+
+    /**
+     * Get the translation provider type
+     * @return provider type ('google' or 'chatgpt')
+     */
+    public provider(): 'google' | 'chatgpt' {
+        if (this._autotranslate) {
+            if (!this._provider) {
+                throw new XliffMergeError('Provider must be explicitly set when autotranslate is enabled. Please set provider to either "google" or "chatgpt"');
+            }
+            if (this._provider !== 'google' && this._provider !== 'chatgpt') {
+                throw new XliffMergeError('Invalid provider. Provider must be either "google" or "chatgpt"');
+            }
+
+            // Validate API key format matches provider
+            const apikey = this._apikey || (this._apikeyfile ? FileUtil.read(this._apikeyfile, 'utf-8') : null);
+            if (apikey) {
+                if (this._provider === 'chatgpt' && !apikey.startsWith('sk-')) {
+                    throw new XliffMergeError('Cannot proceed with translation: OpenAI API key format is invalid. Please provide a valid OpenAI API key or switch to Google Translate provider.');
+                }
+                if (this._provider === 'google' && !apikey.startsWith('AIza')) {
+                    throw new XliffMergeError('Cannot proceed with translation: Google Translate API key format is invalid. Please provide a valid Google Translate API key or switch to ChatGPT provider.');
+                }
+            }
+        }
+
+        return this._provider || 'google';
+    }
+
+    /**
+     * Get the model name for ChatGPT
+     * @return model name
+     */
+    public model(): string {
+        return this._model || 'gpt-4o-mini';
     }
 }
