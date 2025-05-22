@@ -96,9 +96,9 @@ export class AutoTranslateSummaryReport {
   public content(): string {
     let result;
     if (this._error) {
-      result = format('Auto translation from "%s" to "%s" failed: "%s", failed units: %s', this._from, this._to, this._error, this._failed);
+      result = format('TEST Auto translation from "%s" to "%s" failed: "%s", failed units: %s', this._from, this._to, this._error, this._failed);
     } else {
-      result = format('Auto translation from "%s" to "%s", total auto translated units: %s, ignored: %s, succesful: %s, failed: %s',
+      result = format('TEST Auto translation from "%s" to "%s", total auto translated units: %s, ignored: %s, succesful: %s, failed: %s',
           this._from, this._to, this._total, this._ignored, this._success, this._failed);
     }
     return result;
