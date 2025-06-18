@@ -7,19 +7,40 @@ import {
     STATE_NEW
 } from '@ngx-i18nsupport/ngx-i18nsupport-lib';
 import {AutoTranslateService} from './auto-translate-service';
+import {OpenAiTranslateService} from './openai-translate-service';
 import {AutoTranslateResult} from './auto-translate-result';
 import {AutoTranslateSummaryReport} from './auto-translate-summary-report';
 /**
  * Created by martin on 07.07.2017.
- * Service to autotranslate Transunits via Google Translate.
+ * Service to autotranslate Transunits via Google Translate or ChatGPT.
  */
 
 export class XliffMergeAutoTranslateService {
 
-    private autoTranslateService: AutoTranslateService;
+    private googleTranslateService: AutoTranslateService;
+    private openAiTranslateService: OpenAiTranslateService;
+    private provider: string;
 
-    constructor(apikey: string) {
-        this.autoTranslateService = new AutoTranslateService(apikey);
+    constructor(apikey: string, provider: string = 'google', openAiApiKey?: string, openAiModel?: string) {
+        this.provider = provider;
+        if (provider === 'google') {
+            this.googleTranslateService = new AutoTranslateService(apikey);
+        } else if (provider === 'chatgpt') {
+            this.openAiTranslateService = new OpenAiTranslateService(openAiApiKey, openAiModel);
+        }
+    }
+
+    /**
+     * Get the appropriate translation service based on the provider
+     */
+    private getTranslationService(): AutoTranslateService | OpenAiTranslateService {
+        if (this.provider === 'google') {
+            return this.googleTranslateService;
+        } else if (this.provider === 'chatgpt') {
+            return this.openAiTranslateService;
+        } else {
+            throw new Error(`Unsupported translation provider: ${this.provider}`);
+        }
     }
 
     /**
@@ -68,7 +89,7 @@ export class XliffMergeAutoTranslateService {
         const allMessages: string[] = allTranslatable.map((tu) => {
             return tu.sourceContentNormalized().asDisplayString();
         });
-        return this.autoTranslateService.translateMultipleStrings(allMessages, from, to)
+        return this.getTranslationService().translateMultipleStrings(allMessages, from, to)
             .pipe(
                 // #94 google translate might return &#.. entity refs, that must be decoded
                 map((translations: string[]) => translations.map(encodedTranslation => entityDecoderLib.decode(encodedTranslation))),
@@ -116,7 +137,7 @@ export class XliffMergeAutoTranslateService {
             return of(summary);
         }
         const allMessages: string[] = categories.map((category) => category.getMessageNormalized().asDisplayString());
-        return this.autoTranslateService.translateMultipleStrings(allMessages, from, to)
+        return this.getTranslationService().translateMultipleStrings(allMessages, from, to)
             .pipe(
                 // #94 google translate might return &#.. entity refs, that must be decoded
                 map((translations: string[]) => translations.map(encodedTranslation => entityDecoderLib.decode(encodedTranslation))),

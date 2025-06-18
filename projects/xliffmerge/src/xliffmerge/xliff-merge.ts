@@ -159,7 +159,20 @@ export class XliffMerge {
         }
         this.readMaster();
         if (this.parameters.autotranslate()) {
-            this.autoTranslateService = new XliffMergeAutoTranslateService(this.parameters.apikey());
+            const provider = this.parameters.provider();
+            if (provider === 'google') {
+                this.autoTranslateService = new XliffMergeAutoTranslateService(this.parameters.apikey(), 'google');
+            } else if (provider === 'chatgpt') {
+                this.autoTranslateService = new XliffMergeAutoTranslateService(
+                    null, // Google API key not needed for ChatGPT
+                    'chatgpt',
+                    this.parameters.openAiApiKey(),
+                    this.parameters.openAiModel()
+                );
+            } else {
+                // Fallback to Google for unknown providers
+                this.autoTranslateService = new XliffMergeAutoTranslateService(this.parameters.apikey(), 'google');
+            }
         }
         const executionForAllLanguages: Observable<number>[] = [];
         this.parameters.languages().forEach((lang: string) => {
