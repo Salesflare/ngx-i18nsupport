@@ -160,18 +160,20 @@ export class XliffMerge {
         this.readMaster();
         if (this.parameters.autotranslate()) {
             const provider = this.parameters.provider();
-            if (provider === 'google') {
-                this.autoTranslateService = new XliffMergeAutoTranslateService(this.parameters.apikey(), 'google');
-            } else if (provider === 'chatgpt') {
+            if (provider === 'chatgpt') {
                 this.autoTranslateService = new XliffMergeAutoTranslateService(
-                    null, // Google API key not needed for ChatGPT
-                    'chatgpt',
+                    undefined, // Google API key not needed for ChatGPT
                     this.parameters.openAiApiKey(),
+                    'chatgpt',
                     this.parameters.openAiModel()
                 );
             } else {
-                // Fallback to Google for unknown providers
-                this.autoTranslateService = new XliffMergeAutoTranslateService(this.parameters.apikey(), 'google');
+                // default to Google
+                this.autoTranslateService = new XliffMergeAutoTranslateService(
+                    this.parameters.apikey(),
+                    undefined, // OpenAI key not needed for Google
+                    'google'
+                );
             }
         }
         const executionForAllLanguages: Observable<number>[] = [];

@@ -17,16 +17,15 @@ import {AutoTranslateSummaryReport} from './auto-translate-summary-report';
 
 export class XliffMergeAutoTranslateService {
 
-    private googleTranslateService: AutoTranslateService;
-    private openAiTranslateService: OpenAiTranslateService;
+    private autoTranslateService: AutoTranslateService | OpenAiTranslateService;
     private provider: string;
 
-    constructor(apikey: string, provider: string = 'google', openAiApiKey?: string, openAiModel?: string) {
+    constructor(apiKey: string, openAiKey?: string, provider: 'google' | 'chatgpt' = 'google', model?: string) {
         this.provider = provider;
-        if (provider === 'google') {
-            this.googleTranslateService = new AutoTranslateService(apikey);
-        } else if (provider === 'chatgpt') {
-            this.openAiTranslateService = new OpenAiTranslateService(openAiApiKey, openAiModel);
+        if (provider === 'chatgpt') {
+            this.autoTranslateService = new OpenAiTranslateService(openAiKey, model);
+        } else {
+            this.autoTranslateService = new AutoTranslateService(apiKey);
         }
     }
 
@@ -34,17 +33,11 @@ export class XliffMergeAutoTranslateService {
      * Get the appropriate translation service based on the provider
      */
     private getTranslationService(): AutoTranslateService | OpenAiTranslateService {
-        if (this.provider === 'google') {
-            return this.googleTranslateService;
-        } else if (this.provider === 'chatgpt') {
-            return this.openAiTranslateService;
-        } else {
-            throw new Error(`Unsupported translation provider: ${this.provider}`);
-        }
+        return this.autoTranslateService;
     }
 
     /**
-     * Auto translate file via Google Translate.
+     * Auto translate file via Google Translate or ChatGPT.
      * Will translate all new units in file.
      * @param from from
      * @param to to
