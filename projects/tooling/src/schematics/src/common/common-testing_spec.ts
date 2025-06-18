@@ -19,7 +19,6 @@ export const workspaceOptions: WorkspaceOptions = {
 
 export const appOptions: ApplicationOptions = {
     name: 'bar',
-    experimentalIvy: false,
     inlineStyle: false,
     inlineTemplate: false,
     minimal: true,
