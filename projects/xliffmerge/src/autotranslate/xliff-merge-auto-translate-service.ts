@@ -19,10 +19,10 @@ export class XliffMergeAutoTranslateService {
     private autoTranslateService: AutoTranslateService;
     private provider: TranslationProvider;
 
-    constructor(apiKey: string, openAiKey?: string, provider: TranslationProvider = 'google', model?: string) {
+    constructor(apiKey: string, _unused?: string, provider: TranslationProvider = 'google', model?: string) {
         this.provider = provider;
         if (provider === 'chatgpt') {
-            this.autoTranslateService = new AutoTranslateService(openAiKey, 'chatgpt', model);
+            this.autoTranslateService = new AutoTranslateService(apiKey, 'chatgpt', model);
         } else {
             this.autoTranslateService = new AutoTranslateService(apiKey, 'google');
         }

@@ -97,19 +97,11 @@
           "enum": ["google", "chatgpt"]
         },
         "apikey": {
-          "description": "API key for usage of Google Translate.",
+          "description": "API key for usage of Google Translate or OpenAI/ChatGPT.",
           "type": "string"
         },
         "apikeyfile": {
-          "description": "file that contains API key for usage of Google Translate.",
-          "type": "string"
-        },
-        "openAiApiKey": {
-          "description": "API key for usage of OpenAI/ChatGPT.",
-          "type": "string"
-        },
-        "openAiApiKeyFile": {
-          "description": "file that contains API key for usage of OpenAI/ChatGPT.",
+          "description": "file that contains API key for usage of Google Translate or OpenAI/ChatGPT.",
           "type": "string"
         },
         "openAiModel": {

@@ -163,8 +163,8 @@ export class XliffMerge {
             const provider = this.parameters.provider();
             if (provider === 'chatgpt') {
                 this.autoTranslateService = new XliffMergeAutoTranslateService(
-                    undefined, // Google API key not needed for ChatGPT
-                    this.parameters.openAiApiKey(),
+                    this.parameters.apikey(),
+                    undefined,
                     'chatgpt',
                     this.parameters.openAiModel()
                 );
