@@ -6,8 +6,7 @@ import {
     IICUMessage, IICUMessageTranslation, INormalizedMessage, ITranslationMessagesFile, ITransUnit,
     STATE_NEW
 } from '@ngx-i18nsupport/ngx-i18nsupport-lib';
-import {AutoTranslateService} from './auto-translate-service';
-import {OpenAiTranslateService} from './openai-translate-service';
+import {AutoTranslateService, TranslationProvider} from './auto-translate-service';
 import {AutoTranslateResult} from './auto-translate-result';
 import {AutoTranslateSummaryReport} from './auto-translate-summary-report';
 /**
@@ -17,22 +16,22 @@ import {AutoTranslateSummaryReport} from './auto-translate-summary-report';
 
 export class XliffMergeAutoTranslateService {
 
-    private autoTranslateService: AutoTranslateService | OpenAiTranslateService;
-    private provider: string;
+    private autoTranslateService: AutoTranslateService;
+    private provider: TranslationProvider;
 
-    constructor(apiKey: string, openAiKey?: string, provider: 'google' | 'chatgpt' = 'google', model?: string) {
+    constructor(apiKey: string, openAiKey?: string, provider: TranslationProvider = 'google', model?: string) {
         this.provider = provider;
         if (provider === 'chatgpt') {
-            this.autoTranslateService = new OpenAiTranslateService(openAiKey, model);
+            this.autoTranslateService = new AutoTranslateService(openAiKey, 'chatgpt', model);
         } else {
-            this.autoTranslateService = new AutoTranslateService(apiKey);
+            this.autoTranslateService = new AutoTranslateService(apiKey, 'google');
         }
     }
 
     /**
      * Get the appropriate translation service based on the provider
      */
-    private getTranslationService(): AutoTranslateService | OpenAiTranslateService {
+    private getTranslationService(): AutoTranslateService {
         return this.autoTranslateService;
     }
 

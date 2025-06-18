@@ -15,6 +15,7 @@ import {Observable, of, forkJoin} from 'rxjs';
 import {map, catchError} from 'rxjs/operators';
 import {XliffMergeAutoTranslateService} from '../autotranslate/xliff-merge-auto-translate-service';
 import {AutoTranslateSummaryReport} from '../autotranslate/auto-translate-summary-report';
+import {TranslationProvider} from '../autotranslate/auto-translate-service';
 
 /**
  * Created by martin on 17.02.2017.
