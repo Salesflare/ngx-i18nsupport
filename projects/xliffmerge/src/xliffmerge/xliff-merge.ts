@@ -161,6 +161,9 @@ export class XliffMerge {
         this.readMaster();
         if (this.parameters.autotranslate()) {
             const provider = this.parameters.provider();
+            // Debug log for provider
+            // eslint-disable-next-line no-console
+            console.debug('[xliffmerge] Provider:', provider);
             if (provider === 'chatgpt') {
                 this.autoTranslateService = new XliffMergeAutoTranslateService(
                     this.parameters.apikey(),
@@ -172,7 +175,7 @@ export class XliffMerge {
                 // default to Google
                 this.autoTranslateService = new XliffMergeAutoTranslateService(
                     this.parameters.apikey(),
-                    undefined, // OpenAI key not needed for Google
+                    undefined,
                     'google'
                 );
             }
