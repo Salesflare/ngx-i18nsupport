@@ -338,7 +338,16 @@ export class AutoTranslateService {
      */
     private translateSingleMessageOpenAI(message: string, from: string, to: string): Observable<string> {
         const realUrl = this._rootUrl + 'chat/completions';
-        
+
+        // Trim the API key to remove accidental whitespace
+        const apiKey = (this._apiKey || '').trim();
+
+        // Debug logging
+        // eslint-disable-next-line no-console
+        console.debug('[OpenAI] Endpoint:', realUrl);
+        // eslint-disable-next-line no-console
+        console.debug('[OpenAI] API Key (first 4, last 4):', apiKey.slice(0, 4) + '...' + apiKey.slice(-4));
+
         // Create the prompt for translation
         const systemPrompt = `You are a professional translator. Translate the given text from ${from} to ${to}. 
         Provide only the translation without any explanations, comments, or additional text. 
@@ -361,7 +370,7 @@ export class AutoTranslateService {
             body: chatRequest,
             json: true,
             headers: {
-                'Authorization': `Bearer ${this._apiKey}`,
+                'Authorization': `Bearer ${apiKey}`,
                 'Content-Type': 'application/json'
             }
         };
@@ -372,9 +381,10 @@ export class AutoTranslateService {
                 if (!body) {
                     throw new Error('no result received from OpenAI');
                 }
-                
-                // Check for OpenAI API errors
+                // Log the full error response for debugging
                 if (body.error) {
+                    // eslint-disable-next-line no-console
+                    console.error('[OpenAI] Error response:', JSON.stringify(body, null, 2));
                     const error: OpenAIError = body;
                     if (error.error.code === 'invalid_api_key') {
                         throw new Error('OpenAI API key is invalid');
@@ -386,17 +396,14 @@ export class AutoTranslateService {
                         throw new Error(format('OpenAI API error: %s', error.error.message));
                     }
                 }
-
                 const response: OpenAIChatResponse = body;
                 if (!response.choices || response.choices.length === 0) {
                     throw new Error('no translation choices received from OpenAI');
                 }
-
                 const translatedText = response.choices[0].message.content.trim();
                 if (!translatedText) {
                     throw new Error('empty translation received from OpenAI');
                 }
-
                 return translatedText;
             }),
             catchError((error) => {
