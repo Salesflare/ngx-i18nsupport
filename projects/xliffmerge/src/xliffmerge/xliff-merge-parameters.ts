@@ -40,8 +40,12 @@ export class XliffMergeParameters {
     private _beautifyOutput: boolean;
     private _preserveOrder: boolean;
     private _autotranslate: boolean|string[];
+    private _provider: string;
     private _apikey: string;
     private _apikeyfile: string;
+    private _openAiApiKey: string;
+    private _openAiApiKeyFile: string;
+    private _openAiModel: string;
 
     public errorsFound: XliffMergeError[];
     public warningsFound: string[];
@@ -146,6 +150,7 @@ export class XliffMergeParameters {
         xliffmergeOptions.srcDir = this.adjustPathToProfilePath(profilePath, xliffmergeOptions.srcDir);
         xliffmergeOptions.genDir = this.adjustPathToProfilePath(profilePath, xliffmergeOptions.genDir);
         xliffmergeOptions.apikeyfile = this.adjustPathToProfilePath(profilePath, xliffmergeOptions.apikeyfile);
+        xliffmergeOptions.openAiApiKeyFile = this.adjustPathToProfilePath(profilePath, xliffmergeOptions.openAiApiKeyFile);
         return profileContent;
     }
 
@@ -234,6 +239,18 @@ export class XliffMergeParameters {
             if (!isNullOrUndefined(profile.apikeyfile)) {
                 this._apikeyfile = profile.apikeyfile;
             }
+            if (!isNullOrUndefined(profile.provider)) {
+                this._provider = profile.provider;
+            }
+            if (!isNullOrUndefined(profile.openAiApiKey)) {
+                this._openAiApiKey = profile.openAiApiKey;
+            }
+            if (!isNullOrUndefined(profile.openAiApiKeyFile)) {
+                this._openAiApiKeyFile = profile.openAiApiKeyFile;
+            }
+            if (!isNullOrUndefined(profile.openAiModel)) {
+                this._openAiModel = profile.openAiModel;
+            }
         } else {
             this.warningsFound.push('did not find "xliffmergeOptions" in profile, using defaults');
         }
@@ -281,9 +298,24 @@ export class XliffMergeParameters {
         if (!(this.i18nFormat() === 'xlf' || this.i18nFormat() === 'xlf2' || this.i18nFormat() === 'xmb')) {
             this.errorsFound.push(new XliffMergeError('i18nFormat "' + this.i18nFormat() + '" invalid, must be "xlf" or "xlf2" or "xmb"'));
         }
-        // autotranslate requires api key
-        if (this.autotranslate() && !this.apikey()) {
-            this.errorsFound.push(new XliffMergeError('autotranslate requires an API key, please set one'));
+        // autotranslate validation based on provider
+        if (this.autotranslate()) {
+            const provider = this.provider();
+            if (provider === 'google') {
+                if (!this.apikey()) {
+                    this.errorsFound.push(new XliffMergeError('autotranslate with Google requires an API key, please set one'));
+                }
+            } else if (provider === 'chatgpt') {
+                if (!this.openAiApiKey()) {
+                    this.errorsFound.push(new XliffMergeError('autotranslate with ChatGPT requires an OpenAI API key, please set one'));
+                }
+            } else {
+                // Unknown provider, default to Google with warning
+                this.warningsFound.push(`unknown provider "${provider}", defaulting to "google"`);
+                if (!this.apikey()) {
+                    this.errorsFound.push(new XliffMergeError('autotranslate with Google requires an API key, please set one'));
+                }
+            }
         }
         // autotranslated languages must be in list of all languages
         this.autotranslatedLanguages().forEach((lang) => {
@@ -314,7 +346,7 @@ export class XliffMergeParameters {
                     'configured targetSuffix "' + this.targetSuffix() + '" will not be used because "useSourceAsTarget" is disabled"');
             }
         }
-     }
+    }
 
     /**
      * Check syntax of language.
@@ -372,8 +404,15 @@ export class XliffMergeParameters {
         commandOutput.debug('autotranslate:\t%s', this.autotranslate());
         if (this.autotranslate()) {
             commandOutput.debug('autotranslated languages:\t%s', this.autotranslatedLanguages());
-            commandOutput.debug('apikey:\t%s', this.apikey() ? '****' : 'NOT SET');
-            commandOutput.debug('apikeyfile:\t%s', this.apikeyfile());
+            commandOutput.debug('provider:\t%s', this.provider());
+            if (this.provider() === 'google') {
+                commandOutput.debug('apikey:\t%s', this.apikey() ? '****' : 'NOT SET');
+                commandOutput.debug('apikeyfile:\t%s', this.apikeyfile());
+            } else if (this.provider() === 'chatgpt') {
+                commandOutput.debug('openAiApiKey:\t%s', this.openAiApiKey() ? '****' : 'NOT SET');
+                commandOutput.debug('openAiApiKeyFile:\t%s', this.openAiApiKeyFile());
+                commandOutput.debug('openAiModel:\t%s', this.openAiModel() || 'gpt-3.5-turbo');
+            }
         }
     }
 
@@ -596,5 +635,40 @@ export class XliffMergeParameters {
         } else {
             return null;
         }
+    }
+
+    public provider(): string {
+        return this._provider ? this._provider : 'google';
+    }
+
+    public openAiApiKey(): string {
+        if (!isNullOrUndefined(this._openAiApiKey)) {
+            return this._openAiApiKey;
+        } else {
+            const openAiApiKeyPath = this.openAiApiKeyFile();
+            if (this.openAiApiKeyFile()) {
+                if (fs.existsSync(openAiApiKeyPath)) {
+                    return FileUtil.read(openAiApiKeyPath, 'utf-8');
+                } else {
+                    throw new Error(format('OpenAI API key file not found: OPENAI_API_KEY_FILE=%s', openAiApiKeyPath));
+                }
+            } else {
+                return null;
+            }
+        }
+    }
+
+    public openAiApiKeyFile(): string {
+        if (this._openAiApiKeyFile) {
+            return this._openAiApiKeyFile;
+        } else if (process.env.OPENAI_API_KEY_FILE) {
+            return process.env.OPENAI_API_KEY_FILE;
+        } else {
+            return null;
+        }
+    }
+
+    public openAiModel(): string {
+        return this._openAiModel ? this._openAiModel : 'gpt-3.5-turbo';
     }
 }
