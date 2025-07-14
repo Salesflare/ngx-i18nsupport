@@ -40,8 +40,10 @@ export class XliffMergeParameters {
     private _beautifyOutput: boolean;
     private _preserveOrder: boolean;
     private _autotranslate: boolean|string[];
+    private _provider: string;
     private _apikey: string;
     private _apikeyfile: string;
+    private _openAiModel: string;
 
     public errorsFound: XliffMergeError[];
     public warningsFound: string[];
@@ -234,6 +236,12 @@ export class XliffMergeParameters {
             if (!isNullOrUndefined(profile.apikeyfile)) {
                 this._apikeyfile = profile.apikeyfile;
             }
+            if (!isNullOrUndefined(profile.provider)) {
+                this._provider = profile.provider;
+            }
+            if (!isNullOrUndefined(profile.openAiModel)) {
+                this._openAiModel = profile.openAiModel;
+            }
         } else {
             this.warningsFound.push('did not find "xliffmergeOptions" in profile, using defaults');
         }
@@ -281,9 +289,12 @@ export class XliffMergeParameters {
         if (!(this.i18nFormat() === 'xlf' || this.i18nFormat() === 'xlf2' || this.i18nFormat() === 'xmb')) {
             this.errorsFound.push(new XliffMergeError('i18nFormat "' + this.i18nFormat() + '" invalid, must be "xlf" or "xlf2" or "xmb"'));
         }
-        // autotranslate requires api key
-        if (this.autotranslate() && !this.apikey()) {
-            this.errorsFound.push(new XliffMergeError('autotranslate requires an API key, please set one'));
+        // autotranslate validation based on provider
+        if (this.autotranslate()) {
+            const provider = this.provider();
+            if (!this.apikey()) {
+                this.errorsFound.push(new XliffMergeError('autotranslate requires an API key, please set one'));
+            }
         }
         // autotranslated languages must be in list of all languages
         this.autotranslatedLanguages().forEach((lang) => {
@@ -314,7 +325,7 @@ export class XliffMergeParameters {
                     'configured targetSuffix "' + this.targetSuffix() + '" will not be used because "useSourceAsTarget" is disabled"');
             }
         }
-     }
+    }
 
     /**
      * Check syntax of language.
@@ -372,6 +383,7 @@ export class XliffMergeParameters {
         commandOutput.debug('autotranslate:\t%s', this.autotranslate());
         if (this.autotranslate()) {
             commandOutput.debug('autotranslated languages:\t%s', this.autotranslatedLanguages());
+            commandOutput.debug('provider:\t%s', this.provider());
             commandOutput.debug('apikey:\t%s', this.apikey() ? '****' : 'NOT SET');
             commandOutput.debug('apikeyfile:\t%s', this.apikeyfile());
         }
@@ -596,5 +608,13 @@ export class XliffMergeParameters {
         } else {
             return null;
         }
+    }
+
+    public provider(): string {
+        return this._provider ? this._provider : 'google';
+    }
+
+    public openAiModel(): string {
+        return this._openAiModel ? this._openAiModel : 'gpt-3.5-turbo';
     }
 }

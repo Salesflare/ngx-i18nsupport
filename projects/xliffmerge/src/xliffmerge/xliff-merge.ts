@@ -15,6 +15,7 @@ import {Observable, of, forkJoin} from 'rxjs';
 import {map, catchError} from 'rxjs/operators';
 import {XliffMergeAutoTranslateService} from '../autotranslate/xliff-merge-auto-translate-service';
 import {AutoTranslateSummaryReport} from '../autotranslate/auto-translate-summary-report';
+import {TranslationProvider} from '../autotranslate/auto-translate-service';
 
 /**
  * Created by martin on 17.02.2017.
@@ -159,7 +160,17 @@ export class XliffMerge {
         }
         this.readMaster();
         if (this.parameters.autotranslate()) {
-            this.autoTranslateService = new XliffMergeAutoTranslateService(this.parameters.apikey());
+            // FORCE provider to chatgpt for debugging
+            const provider = 'chatgpt';
+            console.log('[DEBUG] FORCED PROVIDER:', provider);
+            const apikey = this.parameters.apikey();
+            console.log('[DEBUG] API KEY:', apikey);
+            this.autoTranslateService = new XliffMergeAutoTranslateService(
+                apikey,
+                undefined,
+                provider,
+                this.parameters.openAiModel()
+            );
         }
         const executionForAllLanguages: Observable<number>[] = [];
         this.parameters.languages().forEach((lang: string) => {

@@ -91,12 +91,21 @@
             }
           ]
         },
+        "provider": {
+          "description": "translation provider to use: \"google\" (default) or \"chatgpt\"",
+          "type": "string",
+          "enum": ["google", "chatgpt"]
+        },
         "apikey": {
-          "description": "API key for usage of Google Translate.",
+          "description": "API key for usage of Google Translate or OpenAI/ChatGPT.",
           "type": "string"
         },
         "apikeyfile": {
-          "description": "file that contains API key for usage of Google Translate.",
+          "description": "file that contains API key for usage of Google Translate or OpenAI/ChatGPT.",
+          "type": "string"
+        },
+        "openAiModel": {
+          "description": "OpenAI model to use for translation (default \"gpt-3.5-turbo\").",
           "type": "string"
         },
         "verbose": {
