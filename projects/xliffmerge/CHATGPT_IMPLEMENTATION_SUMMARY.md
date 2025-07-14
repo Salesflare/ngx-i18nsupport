@@ -1,7 +1,7 @@
 # ChatGPT Integration Implementation Summary
 
 ## Overview
-Successfully integrated ChatGPT as an optional translation provider in the ngx-i18nsupport xliffmerge tool, allowing users to choose between Google Translate and ChatGPT for automatic translations. The implementation uses a consolidated approach where both providers are handled by a single service class, and a single `apikey`/`apikeyfile` field is used for both providers.
+Tried to integrate ChatGPT as an optional translation provider in the ngx-i18nsupport xliffmerge tool, allowing users to choose between Google Translate and ChatGPT for automatic translations. The implementation uses a consolidated approach where both providers are handled by a single service class, and a single `apikey`/`apikeyfile` field is used for both providers.
 
 ## ✅ Step 1: Configuration Integration
 - **Files Modified:**
