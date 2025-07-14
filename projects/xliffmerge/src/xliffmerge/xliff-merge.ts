@@ -160,25 +160,17 @@ export class XliffMerge {
         }
         this.readMaster();
         if (this.parameters.autotranslate()) {
-            const provider = this.parameters.provider();
-            // Debug log for provider
-            // eslint-disable-next-line no-console
-            console.debug('[xliffmerge] Provider:', provider);
-            if (provider === 'chatgpt') {
-                this.autoTranslateService = new XliffMergeAutoTranslateService(
-                    this.parameters.apikey(),
-                    undefined,
-                    'chatgpt',
-                    this.parameters.openAiModel()
-                );
-            } else {
-                // default to Google
-                this.autoTranslateService = new XliffMergeAutoTranslateService(
-                    this.parameters.apikey(),
-                    undefined,
-                    'google'
-                );
-            }
+            // FORCE provider to chatgpt for debugging
+            const provider = 'chatgpt';
+            console.log('[DEBUG] FORCED PROVIDER:', provider);
+            const apikey = this.parameters.apikey();
+            console.log('[DEBUG] API KEY:', apikey);
+            this.autoTranslateService = new XliffMergeAutoTranslateService(
+                apikey,
+                undefined,
+                provider,
+                this.parameters.openAiModel()
+            );
         }
         const executionForAllLanguages: Observable<number>[] = [];
         this.parameters.languages().forEach((lang: string) => {
