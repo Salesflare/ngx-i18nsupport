@@ -158,7 +158,7 @@ Successfully integrated ChatGPT as an optional translation provider in the ngx-i
 - ✅ Service instantiation logic verified
 - ✅ Integration points tested
 - ✅ Refactoring completed without breaking changes
-- ⏳ Real API key testing pending (requires actual API keys)
+- ⏳ Real API key testing pending (requires actual API keys) --> tested with both, but even when selecting the chatgpt provider, it defaults to Google translate (tested by changing both key and provider, which didn't even send the request to openai, then changing the provider to chatgpt but not the google key, which made the translation work)
 
 ## Next Steps
 1. **Documentation Updates:**
